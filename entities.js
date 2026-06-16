@@ -564,7 +564,7 @@ export class Player {
         this.animationTimer = 0;
     }
 
-    update(keys, canvasW, canvasH, dt) {
+    update(keys, canvasW, canvasH, dt, touchVector = null) {
         const factor = dt / 16.66;
         
         // Reduz tempo de imunidade
@@ -574,20 +574,36 @@ export class Player {
 
         this.animationTimer += 0.1 * factor;
         
-        // Processa Entrada de Teclas
+        // Processa Entrada de Teclas ou Toque
         let dx = 0;
         let dy = 0;
 
-        if (keys['w'] || keys['W'] || keys['ArrowUp']) dy -= 1;
-        if (keys['s'] || keys['S'] || keys['ArrowDown']) dy += 1;
-        if (keys['a'] || keys['A'] || keys['ArrowLeft']) dx -= 1;
-        if (keys['d'] || keys['D'] || keys['ArrowRight']) dx += 1;
-
-        // Normalização diagonal
-        if (dx !== 0 && dy !== 0) {
+        if (touchVector && (touchVector.x !== 0 || touchVector.y !== 0)) {
+            dx = touchVector.x;
+            dy = touchVector.y;
+            
+            // Garantir que a magnitude do vetor de toque não ultrapasse 1, 
+            // e aplicar normalização para manter consistência na velocidade.
             const length = Math.hypot(dx, dy);
-            dx /= length;
-            dy /= length;
+            if (length > 0.01) {
+                dx /= length;
+                dy /= length;
+            } else {
+                dx = 0;
+                dy = 0;
+            }
+        } else {
+            if (keys['w'] || keys['W'] || keys['ArrowUp']) dy -= 1;
+            if (keys['s'] || keys['S'] || keys['ArrowDown']) dy += 1;
+            if (keys['a'] || keys['A'] || keys['ArrowLeft']) dx -= 1;
+            if (keys['d'] || keys['D'] || keys['ArrowRight']) dx += 1;
+
+            // Normalização diagonal
+            if (dx !== 0 && dy !== 0) {
+                const length = Math.hypot(dx, dy);
+                dx /= length;
+                dy /= length;
+            }
         }
 
         this.moving = dx !== 0 || dy !== 0;

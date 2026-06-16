@@ -31,6 +31,7 @@ body {
     overflow: hidden;
     width: 100vw;
     height: 100vh;
+    touch-action: manipulation;
 }
 
 /* Container de Jogo e Canvas */
@@ -666,5 +667,118 @@ body {
     }
     to {
         opacity: 1;
+    }
+}
+
+/* --- CONTROLES DE TOQUE (CELULAR) --- */
+#joystick-container {
+    display: none;
+    position: absolute;
+    bottom: 30px;
+    left: 30px;
+    width: 120px;
+    height: 120px;
+    z-index: 20;
+    justify-content: center;
+    align-items: center;
+    touch-action: none;
+}
+
+#joystick-base {
+    width: 100px;
+    height: 100px;
+    background: rgba(20, 10, 35, 0.5);
+    border: 2px solid rgba(168, 85, 247, 0.4);
+    border-radius: 50%;
+    position: relative;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(168, 85, 247, 0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#joystick-knob {
+    width: 44px;
+    height: 44px;
+    background: linear-gradient(135deg, var(--purple-neon), #6d28d9);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    position: absolute;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 8px var(--purple-glow);
+    touch-action: none;
+}
+
+#btn-special-touch {
+    display: none;
+    position: absolute;
+    bottom: 40px;
+    right: 40px;
+    width: 70px;
+    height: 70px;
+    background: rgba(20, 10, 35, 0.65);
+    border: 2px solid rgba(168, 85, 247, 0.4);
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: 1.8rem;
+    z-index: 20;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    touch-action: none;
+    transition: transform 0.1s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+#btn-special-touch:active {
+    transform: scale(0.92);
+}
+
+/* Quando especial está pronto, o botão brilha vermelho */
+#btn-special-touch.ready {
+    border-color: #ef4444;
+    background: rgba(158, 12, 27, 0.4);
+    box-shadow: 0 0 15px var(--blood-red-glow), 0 0 5px rgba(255, 255, 255, 0.4);
+    animation: touchPulse 1.5s infinite alternate ease-in-out;
+}
+
+@keyframes touchPulse {
+    from {
+        transform: scale(1);
+        box-shadow: 0 0 10px var(--blood-red-glow);
+    }
+    to {
+        transform: scale(1.06);
+        box-shadow: 0 0 20px #ef4444;
+    }
+}
+
+#btn-special-touch.cooldown {
+    opacity: 0.4;
+    background: rgba(10, 5, 20, 0.8);
+    border-color: rgba(120, 120, 120, 0.3);
+    color: var(--text-muted);
+}
+
+/* Se for um dispositivo de toque (mobile) */
+@media (pointer: coarse) and (max-width: 1024px) {
+    body.touch-device #joystick-container {
+        display: flex;
+    }
+
+    body.touch-device #btn-special-touch {
+        display: flex;
+    }
+
+    /* Ajuste no botão de pause no celular para ser mais fácil de tocar */
+    body.touch-device #btn-pause-toggle {
+        width: 48px;
+        height: 48px;
+        font-size: 1.2rem;
+        top: 50px;
+        right: 20px;
     }
 }

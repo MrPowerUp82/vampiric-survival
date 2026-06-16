@@ -36,6 +36,16 @@ const btnRestart = document.getElementById('btn-restart');
 const btnResume = document.getElementById('btn-resume');
 const btnPauseToggle = document.getElementById('btn-pause-toggle');
 
+// Controles de Toque (Celular)
+const joystickContainer = document.getElementById('joystick-container');
+const joystickBase = document.getElementById('joystick-base');
+const joystickKnob = document.getElementById('joystick-knob');
+const btnSpecialTouch = document.getElementById('btn-special-touch');
+
+let joystickTouchId = null;
+const joystickCenter = { x: 0, y: 0 };
+const joystickVector = { x: 0, y: 0 };
+
 // --- VARIÁVEIS DE ESTADO DO JOGO ---
 const WORLD_SIZE = 3000; // Tamanho do mapa (limites)
 let gameState = 'start'; // 'start', 'playing', 'upgrade', 'paused', 'gameover'
@@ -184,12 +194,20 @@ function updateHUD() {
         specialRow.classList.add('ready');
         specialCooldownText.innerText = 'PRONTO';
         specialBarFill.style.width = '100%';
+        if (btnSpecialTouch) {
+            btnSpecialTouch.classList.add('ready');
+            btnSpecialTouch.classList.remove('cooldown');
+        }
     } else {
         specialRow.classList.remove('ready');
         const remainingSecs = (specialCooldownTimer / 1000).toFixed(1);
         specialCooldownText.innerText = `${remainingSecs}s`;
         const percentage = ((specialMaxCooldown - specialCooldownTimer) / specialMaxCooldown) * 100;
         specialBarFill.style.width = `${percentage}%`;
+        if (btnSpecialTouch) {
+            btnSpecialTouch.classList.remove('ready');
+            btnSpecialTouch.classList.add('cooldown');
+        }
     }
 }
 
@@ -518,7 +536,7 @@ function updateGame(dt) {
     }
 
     // 2. Atualizar Jogador
-    player.update(keys, WORLD_SIZE, WORLD_SIZE, dt);
+    player.update(keys, WORLD_SIZE, WORLD_SIZE, dt, joystickVector);
 
     // 3. Spawners de Ataque das Armas
     const now = Date.now();
@@ -1056,6 +1074,135 @@ btnPauseToggle.addEventListener('click', () => {
     if (gameState === 'playing') pauseGame();
     else if (gameState === 'paused') resumeGame();
 });
+
+// --- SISTEMA DE CONTROLES DE TOQUE (MOBILE) ---
+
+// 1. Detectar dispositivo de toque no primeiro evento touchstart
+function enableTouchMode() {
+    // Verifica se o dispositivo é realmente móvel ou tablet
+    const isMobileDevice = /Mobi|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
+                           (window.matchMedia("(pointer: coarse)").matches && window.innerWidth <= 1024);
+
+    if (isMobileDevice && !document.body.classList.contains('touch-device')) {
+        document.body.classList.add('touch-device');
+        // Tenta desbloquear o AudioContext caso esteja pausado/bloqueado
+        if (audio && audio.ctx && audio.ctx.state === 'suspended') {
+            audio.ctx.resume().catch(err => console.log('Erro ao resumir AudioContext via touch:', err));
+        }
+    }
+}
+window.addEventListener('touchstart', enableTouchMode, { passive: true });
+
+// 2. Manipulação do Joystick Virtual
+if (joystickBase && joystickKnob) {
+    const maxDragRadius = 40; // Limite de movimento do knob em pixels
+
+    joystickBase.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // Impede rolagem e comportamento indesejado
+        enableTouchMode();
+
+        // Se já houver um toque controlando o joystick, ignora novos toques nele
+        if (joystickTouchId !== null) return;
+
+        const touch = e.changedTouches[0];
+        joystickTouchId = touch.identifier;
+
+        // Calcula a posição do centro físico do joystick na tela
+        const rect = joystickBase.getBoundingClientRect();
+        joystickCenter.x = rect.left + rect.width / 2;
+        joystickCenter.y = rect.top + rect.height / 2;
+
+        handleJoystickMove(touch.clientX, touch.clientY);
+    }, { passive: false });
+
+    window.addEventListener('touchmove', (e) => {
+        if (joystickTouchId === null) return;
+
+        // Encontra o toque correspondente ao joystick
+        let activeTouch = null;
+        for (let i = 0; i < e.touches.length; i++) {
+            if (e.touches[i].identifier === joystickTouchId) {
+                activeTouch = e.touches[i];
+                break;
+            }
+        }
+
+        if (activeTouch) {
+            e.preventDefault(); // Impede comportamento padrão de rolagem
+            handleJoystickMove(activeTouch.clientX, activeTouch.clientY);
+        }
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+        if (joystickTouchId === null) return;
+
+        // Verifica se o toque do joystick terminou
+        let finished = false;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === joystickTouchId) {
+                finished = true;
+                break;
+            }
+        }
+
+        if (finished) {
+            resetJoystick();
+        }
+    });
+
+    window.addEventListener('touchcancel', (e) => {
+        if (joystickTouchId === null) return;
+        
+        let finished = false;
+        for (let i = 0; i < e.changedTouches.length; i++) {
+            if (e.changedTouches[i].identifier === joystickTouchId) {
+                finished = true;
+                break;
+            }
+        }
+
+        if (finished) {
+            resetJoystick();
+        }
+    });
+
+    function handleJoystickMove(clientX, clientY) {
+        let dx = clientX - joystickCenter.x;
+        let dy = clientY - joystickCenter.y;
+        const dist = Math.hypot(dx, dy);
+
+        if (dist > maxDragRadius) {
+            dx = (dx / dist) * maxDragRadius;
+            dy = (dy / dist) * maxDragRadius;
+        }
+
+        // Posiciona visualmente o knob
+        joystickKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+
+        // Define o vetor normalizado para o movimento do jogador (valores entre -1 e 1)
+        joystickVector.x = dx / maxDragRadius;
+        joystickVector.y = dy / maxDragRadius;
+    }
+
+    function resetJoystick() {
+        joystickTouchId = null;
+        joystickKnob.style.transform = 'translate(0px, 0px)';
+        joystickVector.x = 0;
+        joystickVector.y = 0;
+    }
+}
+
+// 3. Manipulação do Botão de Especial Touch
+if (btnSpecialTouch) {
+    btnSpecialTouch.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        enableTouchMode();
+        
+        if (gameState === 'playing') {
+            useSpecialAttack();
+        }
+    }, { passive: false });
+}
 
 // Inicialização automática das telas de menu ao carregar a página
 window.onload = () => {
