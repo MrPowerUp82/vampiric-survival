@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vampire's Survival - Sobreviva à Noite</title>
+    <!-- Google Fonts: Cinzel para cabeçalhos góticos e Outfit para o texto geral do jogo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Canvas principal do jogo -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- HUD (Interface de Jogo) -->
+        <div id="hud" class="hidden">
+            <!-- Barra de Experiência no Topo -->
+            <div id="xp-bar-container">
+                <div id="xp-bar-fill"></div>
+                <span id="xp-text">Nível 1 - 0%</span>
+            </div>
+
+            <!-- Informações de Status -->
+            <div class="hud-top-stats">
+                <div class="stat-box" id="hud-timer">
+                    <span class="stat-label">Tempo</span>
+                    <span class="stat-value" id="timer-val">00:00</span>
+                </div>
+                <div class="stat-box" id="hud-kills">
+                    <span class="stat-label">Eliminações</span>
+                    <span class="stat-value" id="kills-val">0</span>
+                </div>
+            </div>
+
+            <!-- Barra de Vida no Canto Inferior Esquerdo -->
+            <div id="health-container">
+                <div class="health-label-row">
+                    <span id="health-label">VAMPIRICA VITALIDADE</span>
+                    <span id="health-val">100/100</span>
+                </div>
+                <div id="health-bar-bg">
+                    <div id="health-bar-fill"></div>
+                </div>
+                <!-- Ataque Especial -->
+                <div id="special-row">
+                    <div class="special-label-row">
+                        <span id="special-label">⚡ ONDA DE CHOQUE [ESPAÇO]</span>
+                        <span id="special-cooldown-text">PRONTO</span>
+                    </div>
+                    <div id="special-bar-bg">
+                        <div id="special-bar-fill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventário de Armas no Canto Inferior Direito -->
+            <div id="inventory-container">
+                <div class="inventory-title">ARMAS & ITENS</div>
+                <div id="inventory-slots">
+                    <!-- Preenchido dinamicamente via JS -->
+                </div>
+            </div>
+
+            <!-- Botão de Pause -->
+            <button id="btn-pause-toggle">⏸</button>
+        </div>
+
+        <!-- Tela de Menu Inicial -->
+        <div id="menu-start" class="menu-overlay">
+            <div class="menu-content glass-card">
+                <h1 class="game-title">VAMPIRIC<br><span class="highlight">SURVIVAL</span></h1>
+                <p class="game-subtitle">A escuridão se aproxima. Quantos minutos você conseguirá resistir às hordas?</p>
+                
+                <div class="instructions">
+                    <h3>COMO JOGAR:</h3>
+                    <ul>
+                        <li><span class="key">W</span> <span class="key">A</span> <span class="key">S</span> <span class="key">D</span> ou <span class="key">Setas</span> para se mover.</li>
+                        <li>Sua arma inicial (Chicote de Sangue) ataca automaticamente.</li>
+                        <li>Derrote monstros e colete <span class="gem-highlight">Gemas Roxas</span> para ganhar XP.</li>
+                        <li>Suba de nível para obter novas armas e poderes devastadores!</li>
+                    </ul>
+                </div>
+
+                <button id="btn-start" class="glow-button">INICIAR SOBREVIVÊNCIA</button>
+            </div>
+        </div>
+
+        <!-- Tela de Level Up (Pausa para Upgrades) -->
+        <div id="menu-upgrade" class="menu-overlay hidden">
+            <div class="menu-content">
+                <h2 class="section-title">PODER DE SANGUE REVELADO</h2>
+                <p class="section-subtitle">Escolha um upgrade para fortalecer seu vampiro</p>
+                
+                <div id="upgrade-cards-container">
+                    <!-- Gerado via JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tela de Fim de Jogo (Game Over) -->
+        <div id="menu-game-over" class="menu-overlay hidden">
+            <div class="menu-content glass-card">
+                <h2 class="game-over-title">A ESCURIDÃO<br><span class="red-highlight">TE CONSUMIU</span></h2>
+                <p class="game-over-subtitle">Seu sangue esfriou, mas sua lenda permanece.</p>
+
+                <div class="stats-summary">
+                    <div class="summary-item">
+                        <span class="summary-label">Tempo Sobrevivido</span>
+                        <span class="summary-value" id="summary-time">00:00</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Nível Alcançado</span>
+                        <span class="summary-value" id="summary-level">1</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">Monstros Eliminados</span>
+                        <span class="summary-value" id="summary-kills">0</span>
+                    </div>
+                </div>
+
+                <button id="btn-restart" class="glow-button restart-button">TENTAR NOVAMENTE</button>
+            </div>
+        </div>
+
+        <!-- Tela de Pause -->
+        <div id="menu-pause" class="menu-overlay hidden">
+            <div class="menu-content glass-card">
+                <h2 class="section-title">JOGO PAUSADO</h2>
+                <p class="section-subtitle">Respire, a horda aguarda...</p>
+                <button id="btn-resume" class="glow-button">RETOMAR</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts do Jogo (Configurado como módulo para importar outros arquivos) -->
+    <script type="module" src="game.js"></script>
+</body>
+</html>
