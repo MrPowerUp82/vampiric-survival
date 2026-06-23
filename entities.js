@@ -56,7 +56,7 @@ export class DamageText {
         ctx.save();
         ctx.globalAlpha = Math.max(0, this.alpha);
         ctx.fillStyle = this.color;
-        
+
         if (this.isCritical) {
             ctx.font = `bold 14px 'Cinzel', serif`;
             ctx.shadowBlur = 8;
@@ -94,7 +94,7 @@ export class Projectile {
         const factor = dt / 16.66;
         this.x += this.vx * factor;
         this.y += this.vy * factor;
-        
+
         // Efeito de fogo
         if (Math.random() < 0.25) {
             return new Particle(this.x, this.y, '#f97316', this.radius * 0.6, -this.vx * 0.2, -this.vy * 0.2);
@@ -132,7 +132,7 @@ export class Gem {
 
     update(playerX, playerY, magnetSize, dt) {
         const dist = Math.hypot(playerX - this.x, playerY - this.y);
-        
+
         // Atração magnética se estiver no raio do jogador
         if (dist < magnetSize) {
             this.attracted = true;
@@ -152,13 +152,13 @@ export class Gem {
         ctx.shadowBlur = 8;
         ctx.shadowColor = this.color;
         ctx.beginPath();
-        
+
         // Desenha gema em formato de losango (diamond)
         ctx.moveTo(this.x, this.y - this.radius * 1.5);
         ctx.lineTo(this.x + this.radius, this.y);
         ctx.lineTo(this.x, this.y + this.radius * 1.5);
         ctx.lineTo(this.x - this.radius, this.y);
-        
+
         ctx.closePath();
         ctx.fillStyle = this.color;
         ctx.fill();
@@ -173,9 +173,9 @@ export class Enemy {
         this.y = y;
         this.type = type;
         this.isBoss = type === 'reaper';
-        
+
         // Configuração de Tipos
-        switch(type) {
+        switch (type) {
             case 'bat': // Rápido, fraco, pequeno
                 this.radius = 9;
                 this.speed = 1.6;
@@ -223,14 +223,14 @@ export class Enemy {
     update(playerX, playerY, dt) {
         const factor = dt / 16.66;
         this.animationTimer += 0.15 * factor;
-        
+
         // Direção ao jogador
         const angle = Math.atan2(playerY - this.y, playerX - this.x);
-        
+
         // Movimento normal + aplicação de Knockback (repulsão)
         const moveX = Math.cos(angle) * this.speed + this.knockbackX;
         const moveY = Math.sin(angle) * this.speed + this.knockbackY;
-        
+
         this.x += moveX * factor;
         this.y += moveY * factor;
 
@@ -255,7 +255,7 @@ export class Enemy {
 
     draw(ctx) {
         ctx.save();
-        
+
         // Sombra sob os pés dos inimigos
         ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
         ctx.beginPath();
@@ -303,7 +303,7 @@ export class Enemy {
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
             ctx.fillStyle = this.color;
             ctx.fill();
-            
+
             // Orelhas de morcego pontiagudas
             ctx.fillStyle = '#6d28d9';
             ctx.beginPath();
@@ -339,12 +339,12 @@ export class Enemy {
         } else if (this.type === 'skeleton') {
             // Corpo (Esqueleto Branco Detalhado)
             ctx.fillStyle = this.color;
-            
+
             // Cabeça (Crânio estilizado)
             ctx.beginPath();
             ctx.arc(this.x, this.y - 7, this.radius * 0.65, 0, Math.PI * 2);
             ctx.fill();
-            
+
             // Mandíbula e dentes
             ctx.fillRect(this.x - 4, this.y - 1, 8, 4);
             ctx.fillStyle = '#1e293b';
@@ -407,7 +407,7 @@ export class Enemy {
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
             ctx.fillStyle = this.color;
             ctx.fill();
-            
+
             // Cérebro Cor-de-Rosa Exposto (Efeito gore gótico)
             ctx.fillStyle = '#f472b6'; // Rosa
             ctx.beginPath();
@@ -454,7 +454,7 @@ export class Enemy {
             ctx.beginPath();
             ctx.arc(this.x, this.y - 6, this.radius, Math.PI, Math.PI * 2);
             ctx.fill();
-            
+
             // Manto esfarrapado com dobras (Capa flowing)
             ctx.fillStyle = '#110c1f';
             ctx.beginPath();
@@ -540,7 +540,7 @@ export class Player {
         this.y = y;
         this.radius = 14;
         this.speed = 2.4;
-        
+
         // Status do Vampiro
         this.maxHp = 100;
         this.hp = 100;
@@ -548,7 +548,8 @@ export class Player {
         this.xp = 0;
         this.xpToNextLevel = 10;
         this.pendingLevelUps = 0;
-        
+        this.regenTimer = 0;
+
         // Estatísticas modificadas por itens passivos
         this.damageMult = 1.0;
         this.speedMult = 1.0;
@@ -559,21 +560,21 @@ export class Player {
         this.iframe = 0; // Cooldown de imunidade contra hits (invincibility frame)
         this.facing = 'right'; // Direção ('left', 'right')
         this.moving = false;
-        
+
         // Controle de Animações
         this.animationTimer = 0;
     }
 
     update(keys, canvasW, canvasH, dt, touchVector = null) {
         const factor = dt / 16.66;
-        
+
         // Reduz tempo de imunidade
         if (this.iframe > 0) {
             this.iframe -= dt;
         }
 
         this.animationTimer += 0.1 * factor;
-        
+
         // Processa Entrada de Teclas ou Toque
         let dx = 0;
         let dy = 0;
@@ -581,7 +582,7 @@ export class Player {
         if (touchVector && (touchVector.x !== 0 || touchVector.y !== 0)) {
             dx = touchVector.x;
             dy = touchVector.y;
-            
+
             // Garantir que a magnitude do vetor de toque não ultrapasse 1, 
             // e aplicar normalização para manter consistência na velocidade.
             const length = Math.hypot(dx, dy);
@@ -619,14 +620,23 @@ export class Player {
         // Trava nas bordas
         this.x = Math.max(this.radius, Math.min(canvasW - this.radius, this.x));
         this.y = Math.max(this.radius, Math.min(canvasH - this.radius, this.y));
+
+        // Regen HP
+        this.regenTimer += dt;
+        if (this.regenTimer >= 5000) {
+            if (this.hp < this.maxHp) {
+                this.hp = Math.min(this.maxHp, this.hp + 1)
+            }
+            this.regenTimer = 0;
+        }
     }
 
     takeDamage(amount) {
         if (this.iframe > 0) return false;
-        
+
         this.hp = Math.max(0, this.hp - amount);
         this.iframe = 600; // 600ms de imunidade
-        
+
         audio.playHurt();
         return true;
     }
@@ -634,7 +644,7 @@ export class Player {
     gainXp(amount) {
         this.xp += amount;
         audio.playGem();
-        
+
         let leveledUp = false;
         while (this.xp >= this.xpToNextLevel) {
             this.xp -= this.xpToNextLevel;
@@ -644,7 +654,7 @@ export class Player {
             this.pendingLevelUps++;
             leveledUp = true;
         }
-        
+
         if (leveledUp) {
             audio.playLevelUp();
             return true; // Subiu de nível
@@ -672,12 +682,12 @@ export class Player {
         }
 
         const angle = this.facing === 'left' ? Math.PI : 0;
-        
+
         // --- DESENHAR CAPA VAMPÍRICA ---
         ctx.fillStyle = '#7f1d1d'; // Vermelho capa interna
         ctx.beginPath();
         const capeWobble = this.moving ? Math.sin(this.animationTimer * 1.5) * 4 : 0;
-        
+
         if (this.facing === 'right') {
             ctx.moveTo(this.x - 5, this.y - 4);
             ctx.quadraticCurveTo(this.x - 22, this.y + capeWobble, this.x - 18, this.y + 16 + capeWobble);
@@ -741,14 +751,14 @@ export class Player {
         ctx.beginPath();
         ctx.arc(this.x, this.y - 8, this.radius * 0.68, Math.PI, Math.PI * 2);
         ctx.fill();
-        
+
         // Picos de cabelo gótico nas laterais
         ctx.beginPath();
         if (this.facing === 'right') {
             ctx.moveTo(this.x - 6, this.y - 8);
             ctx.lineTo(this.x - 7, this.y - 3);
             ctx.lineTo(this.x - 3, this.y - 7);
-            
+
             ctx.moveTo(this.x + 5, this.y - 8);
             ctx.lineTo(this.x + 4, this.y - 5);
             ctx.lineTo(this.x + 2, this.y - 7);
@@ -855,17 +865,17 @@ export class BloodWhip extends Weapon {
     attack(now, player, enemies) {
         this.lastAttack = now;
         audio.playWhip();
-        
+
         const damage = Math.round(15 * player.damageMult * (1 + (this.level >= 2 ? 0.25 : 0)));
         const area = 90 * player.areaMult * (this.level >= 4 ? 1.3 : 1.0);
         const height = 24 * player.areaMult;
-        
+
         const attacks = [];
-        
+
         // Ataque na frente
         const dir = player.facing === 'right' ? 1 : -1;
         attacks.push({
-            x: player.x + (dir * area/2),
+            x: player.x + (dir * area / 2),
             y: player.y,
             w: area,
             h: height,
@@ -877,7 +887,7 @@ export class BloodWhip extends Weapon {
         // Nível 3 corta nas duas direções
         if (this.level >= 3) {
             attacks.push({
-                x: player.x - (dir * area/2),
+                x: player.x - (dir * area / 2),
                 y: player.y,
                 w: area,
                 h: height,
@@ -965,10 +975,10 @@ export class GarlicAura extends Weapon {
 
     attack(now, player, enemies) {
         this.lastAttack = now;
-        
+
         const radius = 55 * player.areaMult * (this.level >= 2 ? 1.25 : 1.0);
         const damage = Math.round(3 * player.damageMult * (this.level >= 3 ? 1.35 : 1.0));
-        
+
         // A aura ataca instantaneamente todos os inimigos no raio
         const list = [];
         enemies.forEach(enemy => {
@@ -1001,7 +1011,7 @@ export class OrbitScythe extends Weapon {
 
     attack(now, player, enemies) {
         this.lastAttack = now;
-        
+
         const count = this.level >= 3 ? 2 : 1;
         const damage = Math.round(22 * player.damageMult * (this.level >= 4 ? 1.25 : 1.0));
         const duration = this.level >= 4 ? 4000 : 3000;
