@@ -99,10 +99,32 @@ window.addEventListener('keyup', (e) => {
     keys[e.key] = false;
 });
 
-// Redimensionamento do Canvas
+// Escala e Dimensões Virtuais do Canvas
+let scale = 1;
+let viewWidth = window.innerWidth;
+let viewHeight = window.innerHeight;
+
+// Redimensionamento do Canvas com Escala Dinâmica
 function resizeCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    
+    // Calcula a escala responsiva
+    if (window.innerWidth > window.innerHeight) {
+        // Landscape: mantemos a altura virtual visível próxima de 600 unidades
+        scale = window.innerHeight / 600;
+    } else {
+        // Portrait: mantemos a largura virtual visível próxima de 400 unidades
+        scale = window.innerWidth / 400;
+    }
+    
+    // Clampar para evitar escalas microscópicas ou exageradas
+    scale = Math.max(0.6, Math.min(2.5, scale));
+    
+    // Determinar largura e altura virtuais na escala calculada
+    viewWidth = canvas.width / scale;
+    viewHeight = canvas.height / scale;
+    
     ctx.imageSmoothingEnabled = false;
 }
 window.addEventListener('resize', resizeCanvas);
@@ -380,9 +402,11 @@ function createUpgradeCard(item) {
     card.className = 'upgrade-card';
     card.innerHTML = `
         <div class="upgrade-icon">${item.emoji}</div>
-        <div class="upgrade-name">${item.name}</div>
-        <div class="upgrade-level">${isNew ? 'NOVO PODER' : `Nível ${nextLevel}`}</div>
-        <div class="upgrade-desc">${description}</div>
+        <div class="upgrade-details">
+            <div class="upgrade-name">${item.name}</div>
+            <div class="upgrade-level">${isNew ? 'NOVO PODER' : `Nível ${nextLevel}`}</div>
+            <div class="upgrade-desc">${description}</div>
+        </div>
     `;
 
     card.addEventListener('click', () => {
@@ -398,9 +422,11 @@ function createHealCard() {
     card.className = 'upgrade-card';
     card.innerHTML = `
         <div class="upgrade-icon">🩸</div>
-        <div class="upgrade-name">Banquete de Sangue</div>
-        <div class="upgrade-level">Especial</div>
-        <div class="upgrade-desc">Cura +35 Pontos de Vida instantaneamente.</div>
+        <div class="upgrade-details">
+            <div class="upgrade-name">Banquete de Sangue</div>
+            <div class="upgrade-level">Especial</div>
+            <div class="upgrade-desc">Cura +35 Pontos de Vida instantaneamente.</div>
+        </div>
     `;
 
     card.addEventListener('click', () => {
@@ -481,9 +507,10 @@ function spawnEnemy() {
 
     // Spawna inimigos em círculo logo fora do campo de visão da câmera
     const angle = Math.random() * Math.PI * 2;
-    // O viewport diagonal é cerca de Math.hypot(canvas.width, canvas.height) / 2
-    // Garante spawn fora da tela, a uns 450 a 650px de distância do jogador
-    const dist = 450 + Math.random() * 200;
+    // O viewport diagonal é cerca de Math.hypot(viewWidth, viewHeight) / 2
+    // Garante spawn fora da tela visível
+    const viewportHalfDiagonal = Math.hypot(viewWidth, viewHeight) / 2;
+    const dist = viewportHalfDiagonal + 50 + Math.random() * 100;
     const spawnX = player.x + Math.cos(angle) * dist;
     const spawnY = player.y + Math.sin(angle) * dist;
 
@@ -869,14 +896,17 @@ function drawGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 1. Atualizar e Limitar Câmera
-    camera.x = player.x - canvas.width / 2;
-    camera.y = player.y - canvas.height / 2;
+    camera.x = player.x - viewWidth / 2;
+    camera.y = player.y - viewHeight / 2;
 
     // Impede a câmera de sair do mapa de tamanho WORLD_SIZE
-    camera.x = Math.max(0, Math.min(WORLD_SIZE - canvas.width, camera.x));
-    camera.y = Math.max(0, Math.min(WORLD_SIZE - canvas.height, camera.y));
+    camera.x = Math.max(0, Math.min(WORLD_SIZE - viewWidth, camera.x));
+    camera.y = Math.max(0, Math.min(WORLD_SIZE - viewHeight, camera.y));
 
     ctx.save();
+    
+    // Aplicar escala responsiva
+    ctx.scale(scale, scale);
     
     // 2. Aplicar Screen Shake (Efeito tremor)
     if (screenShake > 0) {
@@ -949,23 +979,23 @@ function drawFloorGrid() {
     ctx.strokeStyle = '#120b22'; // Linha escura roxa gótica
     ctx.lineWidth = 1;
 
-    for (let gx = startX; gx < startX + canvas.width + spacing; gx += spacing) {
+    for (let gx = startX; gx < startX + viewWidth + spacing; gx += spacing) {
         ctx.beginPath();
         ctx.moveTo(gx, camera.y);
-        ctx.lineTo(gx, camera.y + canvas.height);
+        ctx.lineTo(gx, camera.y + viewHeight);
         ctx.stroke();
     }
-    for (let gy = startY; gy < startY + canvas.height + spacing; gy += spacing) {
+    for (let gy = startY; gy < startY + viewHeight + spacing; gy += spacing) {
         ctx.beginPath();
         ctx.moveTo(camera.x, gy);
-        ctx.lineTo(camera.x + canvas.width, gy);
+        ctx.lineTo(camera.x + viewWidth, gy);
         ctx.stroke();
     }
 
     // Desenha pequenas cruzes ou texturas nas interseções para detalhar
     ctx.fillStyle = '#1e1136';
-    for (let gx = startX; gx < startX + canvas.width + spacing; gx += spacing) {
-        for (let gy = startY; gy < startY + canvas.height + spacing; gy += spacing) {
+    for (let gx = startX; gx < startX + viewWidth + spacing; gx += spacing) {
+        for (let gy = startY; gy < startY + viewHeight + spacing; gy += spacing) {
             if (gx >= 0 && gx <= WORLD_SIZE && gy >= 0 && gy <= WORLD_SIZE) {
                 ctx.fillRect(gx - 2, gy - 2, 4, 4);
             }

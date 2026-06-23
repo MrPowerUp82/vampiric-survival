@@ -278,6 +278,7 @@ body {
     justify-content: center;
     align-items: center;
     transition: opacity 0.3s ease;
+    overflow-y: auto;
 }
 
 /* Glassmorphism Card Style */
@@ -457,6 +458,14 @@ body {
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.5);
 }
 
+.upgrade-details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+}
+
 .upgrade-card:hover {
     border-color: var(--purple-neon);
     transform: translateY(-8px);
@@ -596,21 +605,57 @@ body {
         flex-direction: row;
         align-items: center;
         text-align: left;
-        padding: 15px;
-        gap: 15px;
+        padding: 12px;
+        gap: 12px;
     }
     .upgrade-icon {
         margin-bottom: 0;
         font-size: 1.8rem;
     }
+    .upgrade-details {
+        align-items: flex-start;
+        text-align: left;
+    }
     .upgrade-desc {
         text-align: left;
+        font-size: 0.75rem;
+    }
+    .upgrade-name {
+        font-size: 0.95rem;
     }
     #health-container {
         width: 180px;
     }
     #inventory-container {
         min-width: 140px;
+    }
+    .inventory-slot {
+        width: 30px;
+        height: 30px;
+        font-size: 0.9rem;
+    }
+    .inventory-level {
+        font-size: 0.5rem;
+    }
+    
+    /* Prevenir sobreposição das informações do HUD de topo */
+    .hud-top-stats {
+        top: 45px;
+        gap: 10px;
+    }
+    .stat-box {
+        min-width: 70px;
+        padding: 4px 10px;
+    }
+    .stat-value {
+        font-size: 1rem;
+    }
+    #btn-pause-toggle {
+        top: 45px;
+        right: 10px;
+        width: 32px;
+        height: 32px;
+        font-size: 0.8rem;
     }
 }
 
@@ -780,5 +825,97 @@ body {
         font-size: 1.2rem;
         top: 50px;
         right: 20px;
+    }
+
+    /* Reposicionar HUD para não colidir com os controles virtuais de toque */
+    body.touch-device #health-container {
+        top: 50px;
+        bottom: auto;
+        left: 20px;
+        width: 180px;
+        padding: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    body.touch-device #inventory-container {
+        top: 135px;
+        left: 20px;
+        bottom: auto;
+        right: auto;
+        min-width: 110px;
+        padding: 6px 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+}
+
+/* Ajustes finos para celulares com tela estreita em modo touch */
+@media (pointer: coarse) and (max-width: 600px) {
+    body.touch-device #health-container {
+        top: 42px;
+        left: 10px;
+        width: 140px;
+        padding: 6px;
+    }
+
+    body.touch-device #inventory-container {
+        top: 115px;
+        left: 10px;
+    }
+
+    body.touch-device #btn-pause-toggle {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+        top: 42px;
+        right: 10px;
+    }
+}
+
+/* Ajustes de responsividade para telas curtas (como celulares deitados) */
+@media (max-height: 600px) {
+    .menu-overlay {
+        align-items: flex-start;
+        padding: 20px 10px;
+    }
+    .menu-content {
+        padding: 20px;
+        margin-top: 10px;
+        margin-bottom: 10px;
+    }
+    .game-title {
+        font-size: 2rem;
+        margin-bottom: 10px;
+    }
+    .game-subtitle {
+        margin-bottom: 15px;
+        font-size: 0.85rem;
+    }
+    .instructions {
+        margin-bottom: 15px;
+        padding: 12px;
+    }
+    .instructions li {
+        font-size: 0.75rem;
+        margin-bottom: 6px;
+    }
+    .glow-button {
+        padding: 12px 20px;
+        font-size: 0.95rem;
+    }
+    .section-title {
+        font-size: 1.5rem;
+    }
+    .section-subtitle {
+        margin-bottom: 15px;
+    }
+}
+
+@media (max-height: 500px) {
+    .upgrade-card {
+        padding: 12px 10px;
+    }
+    .upgrade-icon {
+        font-size: 1.8rem;
+        margin-bottom: 8px;
     }
 }
