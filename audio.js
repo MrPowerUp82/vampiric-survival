@@ -11,7 +11,7 @@ class AudioSynthManager {
         this.notes = {
             'A2': 110.00, 'C3': 130.81, 'D2': 73.42, 'D3': 146.83,
             'E2': 82.41, 'E3': 164.81, 'F2': 87.31, 'F3': 174.61, 'G2': 98.00,
-            'A3': 220.00, 'B3': 246.94, 'C4': 261.63, 'D4': 293.66,
+            'G3': 196.00, 'A3': 220.00, 'B3': 246.94, 'C4': 261.63, 'D4': 293.66,
             'E4': 329.63, 'F4': 349.23, 'G4': 392.00, 'A4': 440.00,
             'C5': 523.25, 'E5': 659.25, 'G5': 783.99, 'A5': 880.00
         };
@@ -365,7 +365,8 @@ class AudioSynthManager {
                 const gain = this.ctx.createGain();
                 
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(this.notes[bassNote], now);
+                const freq = this.notes[bassNote] || 110.00;
+                osc.frequency.setValueAtTime(freq, now);
                 
                 gain.gain.setValueAtTime(0.15, now);
                 gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
@@ -391,7 +392,8 @@ class AudioSynthManager {
                     const gain = this.ctx.createGain();
                     
                     osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(this.notes[melodyNote], now);
+                    const freq = this.notes[melodyNote] || 220.00;
+                    osc.frequency.setValueAtTime(freq, now);
                     
                     gain.gain.setValueAtTime(0.04, now);
                     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);

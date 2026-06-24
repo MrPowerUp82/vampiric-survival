@@ -484,6 +484,9 @@ function resumeAfterUpgrade() {
 // --- GERAÇÃO (SPAWN) DE MONSTROS ---
 
 function spawnEnemy() {
+    // Limite máximo de inimigos ativos simultâneos para evitar gargalo de processamento
+    if (enemies.length >= 300) return;
+
     // Decide o tipo com base no tempo decorrido (em segundos)
     const elapsedSecs = gameTime / 1000;
     let type = 'bat';
@@ -536,7 +539,7 @@ function spawnBoss() {
     enemies.push(new Enemy(spawnX, spawnY, 'reaper', difficultyMult * 1.5));
     
     // Adiciona um aviso visual flutuante
-    damageTexts.push(new DamageText(player.x, player.y - 40, 'O CEIFADOR CHEGOU!', '#ef4444', true));
+    pushDamageText(player.x, player.y - 40, 'O CEIFADOR CHEGOU!', '#ef4444', true);
 }
 
 // --- LÓGICA DO JOGO (UPDATE) ---
@@ -594,7 +597,7 @@ function updateGame(dt) {
                     createBloodParticles(item.enemy.x, item.enemy.y, 3);
                     
                     // Texto de dano
-                    damageTexts.push(new DamageText(item.enemy.x, item.enemy.y - 10, String(item.damage), '#c084fc'));
+                    pushDamageText(item.enemy.x, item.enemy.y - 10, String(item.damage), '#c084fc');
 
                     // Knockback se for nível 4+
                     if (item.knockback) {
@@ -647,7 +650,7 @@ function updateGame(dt) {
                     
                     audio.playHit();
                     createBloodParticles(enemy.x, enemy.y, 4);
-                    damageTexts.push(new DamageText(enemy.x, enemy.y - 12, String(dmg), '#cbd5e1', isArmorPen));
+                    pushDamageText(enemy.x, enemy.y - 12, String(dmg), '#cbd5e1', isArmorPen);
 
                     // Aplica repulsão leve
                     const kbAngle = Math.atan2(enemy.y - player.y, enemy.x - player.x);
@@ -682,7 +685,7 @@ function updateGame(dt) {
                 audio.playHit();
                 
                 createBloodParticles(enemy.x, enemy.y, 5);
-                damageTexts.push(new DamageText(enemy.x, enemy.y - 15, String(whip.damage), '#ef4444', whip.critical));
+                pushDamageText(enemy.x, enemy.y - 15, String(whip.damage), '#ef4444', whip.critical);
 
                 // Aplica repulsão
                 const kbAngle = Math.atan2(enemy.y - player.y, enemy.x - player.x);
@@ -722,15 +725,17 @@ function updateGame(dt) {
         }
     });
 
-    // 7. Atualizar Projéteis
-    projectiles.forEach(proj => {
+    // 7. Atualizar Projéteis (Otimizado com loop for e break precoce para evitar processamento inútil)
+    for (let pIdx = projectiles.length - 1; pIdx >= 0; pIdx--) {
+        const proj = projectiles[pIdx];
         const particleEffect = proj.update(dt);
         if (particleEffect) particles.push(particleEffect);
 
         // Checar colisão com inimigos
-        enemies.forEach(enemy => {
-            if (proj.pierce <= 0) return;
+        for (let eIdx = enemies.length - 1; eIdx >= 0; eIdx--) {
+            if (proj.pierce <= 0) break; // Para o loop de inimigos se o projétil já expirou a perfuração
 
+            const enemy = enemies[eIdx];
             const dist = Math.hypot(enemy.x - proj.x, enemy.y - proj.y);
             if (dist < enemy.radius + proj.radius) {
                 proj.pierce--;
@@ -740,7 +745,7 @@ function updateGame(dt) {
                 createBloodParticles(enemy.x, enemy.y, 4);
                 
                 // Texto de Dano
-                damageTexts.push(new DamageText(enemy.x, enemy.y - 10, String(proj.damage), '#ef4444'));
+                pushDamageText(enemy.x, enemy.y - 10, String(proj.damage), '#ef4444');
 
                 // Knockback suave do fogo
                 const kbAngle = Math.atan2(enemy.y - player.y, enemy.x - player.x);
@@ -750,8 +755,8 @@ function updateGame(dt) {
                     handleEnemyDeath(enemy);
                 }
             }
-        });
-    });
+        }
+    }
 
     // Remove projéteis mortos ou velhos
     projectiles = projectiles.filter(p => !p.isExpired());
@@ -811,7 +816,7 @@ function updateGame(dt) {
                 }
                 
                 // Texto de Dano (Sempre Crítico no Especial)
-                damageTexts.push(new DamageText(enemy.x, enemy.y - 15, String(wave.damage), '#f43f5e', true));
+                pushDamageText(enemy.x, enemy.y - 15, String(wave.damage), '#f43f5e', true);
 
                 // Super repulsão (knockback forte)
                 const kbAngle = Math.atan2(enemy.y - wave.y, enemy.x - wave.x);
@@ -858,6 +863,12 @@ function checkWhipCollision(whip, enemy) {
 
 // Cria estouro de partículas de sangue/mana
 function createBloodParticles(x, y, count, overrideColor = null) {
+    // Reduz a quantidade de partículas geradas se houver muitas na tela para evitar gargalos
+    if (particles.length > 150) {
+        count = Math.max(1, Math.floor(count / 2));
+    }
+    if (particles.length >= 300) return; // Limite máximo de partículas simultâneas
+
     for (let i = 0; i < count; i++) {
         const color = overrideColor || (Math.random() < 0.2 ? '#fca5a5' : '#7f1d1d');
         const radius = Math.random() * 2 + 1.5;
@@ -865,6 +876,28 @@ function createBloodParticles(x, y, count, overrideColor = null) {
         const vy = (Math.random() - 0.5) * 6;
         particles.push(new Particle(x, y, color, radius, vx, vy));
     }
+}
+
+// Cria gemas no chão e as consolida se o limite for atingido para otimizar a renderização
+function spawnGem(x, y, xpValue) {
+    if (gems.length > 150) {
+        // Encontra uma gema próxima (num raio de 120px) que ainda não esteja sendo sugada pelo player
+        const nearbyGem = gems.find(g => !g.attracted && Math.hypot(g.x - x, g.y - y) < 120);
+        if (nearbyGem) {
+            nearbyGem.xpAmount += xpValue;
+            nearbyGem.updateVisuals();
+            return;
+        }
+    }
+    gems.push(new Gem(x, y, xpValue));
+}
+
+// Limita o número de textos de dano simultâneos para otimizar o canvas
+function pushDamageText(x, y, text, color = '#ffffff', isCritical = false) {
+    if (damageTexts.length >= 40) {
+        damageTexts.shift(); // Remove o mais antigo
+    }
+    damageTexts.push(new DamageText(x, y, text, color, isCritical));
 }
 
 // Gerencia a morte do inimigo (Soma morte, gera gema de XP)
@@ -878,7 +911,7 @@ function handleEnemyDeath(enemy) {
     }
     
     // Cria gemas no local da morte
-    gems.push(new Gem(enemy.x, enemy.y, enemy.xpValue));
+    spawnGem(enemy.x, enemy.y, enemy.xpValue);
 
     // Se for chefe, explode em partículas vermelhas brilhantes e dá muita XP
     if (enemy.isBoss) {

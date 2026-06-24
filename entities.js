@@ -128,6 +128,24 @@ export class Gem {
         this.color = '#c084fc'; // Gema roxa brilhante
         this.attracted = false;
         this.speed = 0.5;
+        this.updateVisuals();
+    }
+
+    updateVisuals() {
+        // Altera a cor e o tamanho com base na quantidade de XP
+        if (this.xpAmount >= 50) {
+            this.color = '#ef4444'; // Vermelha super gema
+            this.radius = 7;
+        } else if (this.xpAmount >= 15) {
+            this.color = '#3b82f6'; // Azul gema grande
+            this.radius = 5.5;
+        } else if (this.xpAmount >= 5) {
+            this.color = '#10b981'; // Verde gema média
+            this.radius = 4.5;
+        } else {
+            this.color = '#c084fc'; // Roxa gema comum
+            this.radius = 4;
+        }
     }
 
     update(playerX, playerY, magnetSize, dt) {
@@ -623,7 +641,7 @@ export class Player {
 
         // Regen HP
         this.regenTimer += dt;
-        if (this.regenTimer >= 5000) {
+        if (this.regenTimer >= 3000) {
             if (this.hp < this.maxHp) {
                 this.hp = Math.min(this.maxHp, this.hp + 1)
             }
