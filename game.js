@@ -35,6 +35,8 @@ const btnStart = document.getElementById('btn-start');
 const btnRestart = document.getElementById('btn-restart');
 const btnResume = document.getElementById('btn-resume');
 const btnPauseToggle = document.getElementById('btn-pause-toggle');
+const btnResumeSave = document.getElementById('btn-resume-save');
+const saveIndicator = document.getElementById('save-indicator');
 
 // Controles de Toque (Celular)
 const joystickContainer = document.getElementById('joystick-container');
@@ -175,6 +177,7 @@ function initGame() {
     screenShake = 0;
     spawnCooldown = 1500;
     lastSpawnTime = 0;
+    lastSaveTime = 0;
     lastTime = performance.now();
 
     updateHUD();
@@ -261,6 +264,7 @@ function renderInventoryHTML() {
 function startGame() {
     initGame();
     audio.startMusic();
+    clearSave(); // Garante que inicia sem saves antigos se escolher novo jogo
     
     menuStart.classList.add('hidden');
     menuUpgrade.classList.add('hidden');
@@ -277,6 +281,7 @@ function pauseGame() {
     gameState = 'paused';
     menuPause.classList.remove('hidden');
     audio.stopMusic();
+    saveGame(); // Salva a partida automaticamente no pause
 }
 
 function resumeGame() {
@@ -292,6 +297,7 @@ function triggerGameOver() {
     gameState = 'gameover';
     audio.stopMusic();
     audio.playDeath();
+    clearSave(); // Remove o save ao morrer para evitar continuar da mesma fase
     
     // Preenche as estatísticas finais na tela de Game Over
     const totalSecs = Math.floor(gameTime / 1000);
@@ -547,6 +553,12 @@ function spawnBoss() {
 function updateGame(dt) {
     const factor = dt / 16.66;
     gameTime += dt;
+
+    // Auto-salvar a cada 10 segundos de partida (10000ms)
+    if (gameTime - lastSaveTime > 10000) {
+        saveGame();
+        lastSaveTime = gameTime;
+    }
 
     // Acelera spawner conforme o tempo passa (reduz cooldown mínimo a 300ms)
     const elapsedSecs = gameTime / 1000;
@@ -898,6 +910,230 @@ function pushDamageText(x, y, text, color = '#ffffff', isCritical = false) {
         damageTexts.shift(); // Remove o mais antigo
     }
     damageTexts.push(new DamageText(x, y, text, color, isCritical));
+}
+
+// --- SISTEMA DE SALVAMENTO PERSISTENTE (LOCALSTORAGE) ---
+
+// Variáveis de controle de salvamento
+let lastSaveTime = 0;
+let saveIndicatorTimeout = null;
+
+// Exibe uma notificação visual discreta de salvamento na interface
+function showSaveIndicator() {
+    if (!saveIndicator) return;
+    
+    saveIndicator.classList.remove('hidden');
+    saveIndicator.style.opacity = '1';
+
+    // Cancela timeouts anteriores para evitar bugs de piscar
+    if (saveIndicatorTimeout) clearTimeout(saveIndicatorTimeout);
+    saveIndicatorTimeout = setTimeout(() => {
+        saveIndicator.style.opacity = '0';
+        // Aguarda transição do CSS acabar para ocultar completamente
+        setTimeout(() => {
+            if (saveIndicator.style.opacity === '0') {
+                saveIndicator.classList.add('hidden');
+            }
+        }, 500);
+    }, 1500);
+}
+
+// Mapeador de IDs de string para as classes originais importadas
+function getWeaponOrPassiveClassById(id) {
+    switch (id) {
+        case 'whip': return BloodWhip;
+        case 'fireball': return ShadowFireball;
+        case 'garlic': return GarlicAura;
+        case 'scythe': return OrbitScythe;
+        case 'mirror': return BloodMirror;
+        case 'boots': return BatBoots;
+        case 'magnet': return Magnet;
+        default: return null;
+    }
+}
+
+// Salva o estado atual da partida no localStorage
+function saveGame() {
+    if (!player || gameState === 'gameover' || gameState === 'start') return;
+
+    const saveData = {
+        gameTime,
+        kills,
+        spawnCooldown,
+        player: {
+            x: player.x,
+            y: player.y,
+            hp: player.hp,
+            maxHp: player.maxHp,
+            level: player.level,
+            xp: player.xp,
+            xpToNextLevel: player.xpToNextLevel,
+            pendingLevelUps: player.pendingLevelUps,
+            weapons: activeWeapons.map(w => ({ id: w.id, level: w.level })),
+            passives: activePassives.map(p => ({ id: p.id, level: p.level }))
+        },
+        enemies: enemies.map(e => ({
+            x: e.x,
+            y: e.y,
+            type: e.type,
+            hp: e.hp,
+            difficultyMult: e.difficultyMult || 1.0
+        })),
+        gems: gems.map(g => ({
+            x: g.x,
+            y: g.y,
+            xpAmount: g.xpAmount
+        }))
+    };
+
+    try {
+        localStorage.setItem('vampiric_survival_save', JSON.stringify(saveData));
+        showSaveIndicator();
+    } catch (err) {
+        console.error("Erro ao salvar o jogo no localStorage:", err);
+    }
+}
+
+// Limpa o save do localStorage (chamado ao morrer no Game Over)
+function clearSave() {
+    try {
+        localStorage.removeItem('vampiric_survival_save');
+        if (btnResumeSave) btnResumeSave.classList.add('hidden');
+    } catch (err) {
+        console.error("Erro ao remover o save do localStorage:", err);
+    }
+}
+
+// Verifica se há um save disponível e exibe o botão de retomar
+function checkExistingSave() {
+    try {
+        const save = localStorage.getItem('vampiric_survival_save');
+        if (save && btnResumeSave) {
+            btnResumeSave.classList.remove('hidden');
+        } else if (btnResumeSave) {
+            btnResumeSave.classList.add('hidden');
+        }
+    } catch (err) {
+        console.error("Erro ao verificar o save no localStorage:", err);
+    }
+}
+
+// Restaura e inicia o jogo a partir do save
+function loadGame() {
+    const saveStr = localStorage.getItem('vampiric_survival_save');
+    if (!saveStr) return;
+
+    try {
+        const saveData = JSON.parse(saveStr);
+
+        // 1. Instanciar o jogador e restaurar status básicos
+        player = new Player(saveData.player.x, saveData.player.y);
+        player.hp = saveData.player.hp;
+        player.maxHp = saveData.player.maxHp;
+        player.level = saveData.player.level;
+        player.xp = saveData.player.xp;
+        player.xpToNextLevel = saveData.player.xpToNextLevel;
+        player.pendingLevelUps = saveData.player.pendingLevelUps;
+
+        // 2. Limpar e recriar o Pool de Upgrades
+        upgradePool = [
+            new BloodWhip(),
+            new ShadowFireball(),
+            new GarlicAura(),
+            new OrbitScythe(),
+            new BloodMirror(),
+            new BatBoots(),
+            new Magnet()
+        ];
+        // Reseta todos no pool para nível 0 inicialmente
+        upgradePool.forEach(item => item.level = 0);
+
+        // 3. Restaurar Armas Ativas
+        activeWeapons = [];
+        saveData.player.weapons.forEach(wData => {
+            const WeaponClass = getWeaponOrPassiveClassById(wData.id);
+            if (WeaponClass) {
+                const weapon = new WeaponClass();
+                weapon.level = wData.level;
+                activeWeapons.push(weapon);
+
+                // Sincronizar nível no pool de upgrades
+                const poolItem = upgradePool.find(item => item.id === wData.id);
+                if (poolItem) poolItem.level = wData.level;
+            }
+        });
+
+        // 4. Restaurar Passivos Ativos
+        activePassives = [];
+        saveData.player.passives.forEach(pData => {
+            const PassiveClass = getWeaponOrPassiveClassById(pData.id);
+            if (PassiveClass) {
+                const passive = new PassiveClass();
+                passive.level = pData.level;
+                activePassives.push(passive);
+
+                // Sincronizar nível no pool de upgrades
+                const poolItem = upgradePool.find(item => item.id === pData.id);
+                if (poolItem) poolItem.level = pData.level;
+            }
+        });
+
+        // Aplicar efeitos passivos para restaurar os multiplicadores corretos
+        activePassives.forEach(p => p.applyEffect(player));
+
+        // 5. Restaurar Stats do Jogo
+        gameTime = saveData.gameTime;
+        kills = saveData.kills;
+        spawnCooldown = saveData.spawnCooldown;
+        lastSpawnTime = gameTime;
+        lastSaveTime = gameTime;
+
+        // 6. Restaurar Inimigos
+        enemies = [];
+        saveData.enemies.forEach(eData => {
+            const enemy = new Enemy(eData.x, eData.y, eData.type, eData.difficultyMult);
+            enemy.hp = eData.hp;
+            enemies.push(enemy);
+        });
+
+        // 7. Restaurar Gemas de XP
+        gems = [];
+        saveData.gems.forEach(gData => {
+            const gem = new Gem(gData.x, gData.y, gData.xpAmount);
+            gems.push(gem);
+        });
+
+        // 8. Limpar Efeitos e Partículas ativas do loop anterior
+        projectiles = [];
+        particles = [];
+        damageTexts = [];
+        activeWhips = [];
+        activeScythes = [];
+        activeShockwaves = [];
+        specialCooldownTimer = 0;
+        screenShake = 0;
+
+        // Iniciar som e ocultar menus
+        audio.startMusic();
+        menuStart.classList.add('hidden');
+        menuUpgrade.classList.add('hidden');
+        menuGameOver.classList.add('hidden');
+        menuPause.classList.add('hidden');
+        hud.classList.remove('hidden');
+
+        renderInventoryHTML();
+        updateHUD();
+
+        gameState = 'playing';
+        lastTime = performance.now();
+        requestAnimationFrame(gameLoop);
+
+    } catch (err) {
+        console.error("Erro ao carregar o save do localStorage:", err);
+        // Limpa save corrompido e inicia novo jogo normal em caso de pane
+        clearSave();
+        startGame();
+    }
 }
 
 // Gerencia a morte do inimigo (Soma morte, gera gema de XP)
@@ -1274,4 +1510,21 @@ window.onload = () => {
     menuUpgrade.classList.add('hidden');
     menuGameOver.classList.add('hidden');
     menuPause.classList.add('hidden');
+    
+    // Verifica se há partida anterior para retomar
+    checkExistingSave();
 };
+
+// Evento para retomar o jogo salvo
+if (btnResumeSave) {
+    btnResumeSave.addEventListener('click', () => {
+        loadGame();
+    });
+}
+
+// Salva a partida automaticamente ao fechar o navegador/aba
+window.addEventListener('beforeunload', () => {
+    if (gameState === 'playing' || gameState === 'upgrade' || gameState === 'paused') {
+        saveGame();
+    }
+});

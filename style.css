@@ -808,6 +808,26 @@ body {
     color: var(--text-muted);
 }
 
+/* Indicador de Jogo Salvo */
+#save-indicator {
+    position: absolute;
+    bottom: 160px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(20, 10, 35, 0.85);
+    border: 1px solid var(--purple-neon);
+    border-radius: 6px;
+    padding: 6px 12px;
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), 0 0 8px var(--purple-glow);
+    pointer-events: none;
+    z-index: 50;
+    transition: opacity 0.5s ease;
+}
+
 /* Se for um dispositivo de toque (mobile) */
 @media (pointer: coarse) and (max-width: 1024px) {
     body.touch-device #joystick-container {

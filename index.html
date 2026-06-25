@@ -75,6 +75,9 @@
 
             <!-- Botão de Pause -->
             <button id="btn-pause-toggle">⏸</button>
+
+            <!-- Indicador de Auto-Save -->
+            <div id="save-indicator" class="hidden">💾 Jogo Salvo</div>
         </div>
 
         <!-- Tela de Menu Inicial -->
@@ -94,6 +97,7 @@
                 </div>
 
                 <button id="btn-start" class="glow-button">INICIAR SOBREVIVÊNCIA</button>
+                <button id="btn-resume-save" class="glow-button hidden" style="margin-top: 15px; background: linear-gradient(135deg, #1e1b4b, #312e81); border-color: var(--purple-neon); box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);">RETOMAR JOGO ANTERIOR</button>
             </div>
         </div>
 
@@ -145,6 +149,6 @@
     </div>
 
     <!-- Scripts do Jogo (Configurado como módulo para importar outros arquivos) -->
-    <script type="module" src="game.js?v=1.1"></script>
+    <script type="module" src="game.js?v=1.2"></script>
 </body>
 </html>

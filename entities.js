@@ -236,6 +236,7 @@ export class Enemy {
         this.knockbackY = 0;
         this.knockbackDecay = 0.85;
         this.animationTimer = Math.random() * 100; // Timer para asas/passos
+        this.difficultyMult = difficultyMult;
     }
 
     update(playerX, playerY, dt) {
